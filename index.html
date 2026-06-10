@@ -1,263 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Priorities Chart Maker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-<style>
-  * { box-sizing: border-box; }
-  .toolbar { display: flex; gap: 8px; margin-bottom: 1.25rem; flex-wrap: wrap; align-items: center; padding-top: 1rem; }
-  .toolbar input { flex: 1; min-width: 150px; height: 36px; padding: 0 12px; font-size: 14px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); }
-  .toolbar select { height: 36px; padding: 0 10px; font-size: 14px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: var(--color-background-primary); color: var(--color-text-primary); }
-  .toolbar button { height: 36px; padding: 0 14px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-primary); cursor: pointer; white-space: nowrap; }
-  .toolbar button:hover { background: var(--color-background-secondary); }
-  .dl-btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; font-size: 13px; border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); background: transparent; color: var(--color-text-primary); cursor: pointer; margin-top: 10px; margin-bottom: 6px; }
-  .dl-btn:hover { background: var(--color-background-secondary); }
-  .hint { font-size: 12px; color: var(--color-text-tertiary); margin-top: 4px; }
-  .dot-btn { cursor: pointer; }
-  .dot-btn:hover circle { opacity: 1 !important; }
-</style>
+    :root {
+      --page-bg:    #0f0f0e;
+      --card-bg:    #ffffff;
+      --card-bg2:   #f7f6f3;
+      --panel-bg:   #191918;
+      --text-hi:    #f0efe9;
+      --text-mid:   #8a8a82;
+      --text-lo:    #4a4a44;
+      --border:     rgba(255,255,255,0.08);
+      --border-card:rgba(0,0,0,0.09);
+      --accent:     #E24B4A;
+      --radius:     6px;
+      --radius-lg:  14px;
+      --font:       'DM Sans', system-ui, sans-serif;
+      --mono:       'DM Mono', monospace;
+    }
 
-<h2 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Social issues severity bullseye — click a dot to remove an item</h2>
+    html, body {
+      min-height: 100%;
+      background: var(--page-bg);
+      color: var(--text-hi);
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
 
-<div class="toolbar">
-  <input type="text" id="itemInput" placeholder="Type a social issue…" />
-  <select id="catSelect"></select>
-  <button onclick="addItem()"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
-</div>
-<p class="hint"><i class="ti ti-pointer" aria-hidden="true"></i> Click any dot to remove that item</p>
+    /* ── sticky toolbar ── */
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      background: rgba(15,15,14,0.88);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 1.5rem;
+    }
 
-<div id="chart-wrap"></div>
-<button class="dl-btn" onclick="downloadChart()"><i class="ti ti-download" aria-hidden="true"></i> Download as image</button>
+    .topbar-inner {
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-<script>
-const CATS = [
-  { name:"Immediate Physical or Spiritual Danger", short:"Immediate Danger",  fill:"#FCEBEB", stroke:"#E24B4A", text:"#A32D2D", darkFill:"#501313", darkText:"#F7C1C1" },
-  { name:"Impending Societal Doom",                short:"Societal Doom",      fill:"#FAEEDA", stroke:"#EF9F27", text:"#633806", darkFill:"#412402", darkText:"#FAC775" },
-  { name:"Eternal Damnation",                      short:"Eternal Damnation",  fill:"#EEEDFE", stroke:"#7F77DD", text:"#3C3489", darkFill:"#26215C", darkText:"#CECBF6" },
-  { name:"Spiritual Risk",                         short:"Spiritual Risk",      fill:"#E6F1FB", stroke:"#378ADD", text:"#0C447C", darkFill:"#042C53", darkText:"#B5D4F4" },
-  { name:"Questionable",                           short:"Questionable",        fill:"#EAF3DE", stroke:"#639922", text:"#27500A", darkFill:"#173404", darkText:"#C0DD97" },
-  { name:"Less than Perfect",                      short:"Less than Perfect",   fill:"#E1F5EE", stroke:"#1D9E75", text:"#085041", darkFill:"#04342C", darkText:"#9FE1CB" },
-  { name:"No Issue",                               short:"No Issue",            fill:"#F1EFE8", stroke:"#888780", text:"#444441", darkFill:"#2C2C2A", darkText:"#D3D1C7" },
-];
+    .wordmark {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-mid);
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      margin-right: auto;
+    }
 
-const data = CATS.map(c => ({ ...c, items: [] }));
-const isDark = () => matchMedia('(prefers-color-scheme: dark)').matches;
+    .wordmark span {
+      color: var(--accent);
+    }
 
-const W = 680, CX = 340, CY = 340;
-const OUTER_R = 310, INNER_R = 26;
-const N = CATS.length;
-const STEP = (OUTER_R - INNER_R) / N;
-const DOT_R = 4;
-const PAD = 5;
+    /* ── inputs ── */
+    input[type="text"] {
+      height: 36px;
+      padding: 0 12px;
+      font-size: 13px;
+      font-family: var(--font);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.06);
+      color: var(--text-hi);
+      outline: none;
+      min-width: 180px;
+      flex: 1;
+      transition: border-color .15s, background .15s;
+    }
+    input[type="text"]::placeholder { color: var(--text-lo); }
+    input[type="text"]:focus {
+      border-color: rgba(226,75,74,0.5);
+      background: rgba(255,255,255,0.09);
+    }
 
-const CHAR_W_ITEM = 6.6;
-const CHAR_W_CAT  = 5.4;
-const ITEM_FS = 12;
-const CAT_FS  = 9;
-const CAT_LETTER_SPACING = 1.2;
+    select {
+      height: 36px;
+      padding: 0 10px;
+      font-size: 13px;
+      font-family: var(--font);
+      border: 1px solid rgba(255,255,255,0.14);
+      border-radius: var(--radius);
+      background: rgba(255,255,255,0.06);
+      color: var(--text-hi);
+      outline: none;
+      cursor: pointer;
+      max-width: 220px;
+    }
+    select option { background: #1e1e1c; color: var(--text-hi); }
 
-function ringRadii(i) {
-  const r = OUTER_R - i * STEP;
-  return { r, ri: r - STEP, mid: r - STEP / 2 };
-}
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      height: 36px;
+      padding: 0 14px;
+      font-size: 13px;
+      font-family: var(--font);
+      font-weight: 500;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,0.14);
+      background: transparent;
+      color: var(--text-hi);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: rgba(255,255,255,0.07); }
+    .btn:active { background: rgba(255,255,255,0.12); }
 
-function overlaps(a, b) {
-  return !(a.x > b.x + b.w + PAD || b.x > a.x + a.w + PAD ||
-           a.y > b.y + b.h + PAD || b.y > a.y + a.h + PAD);
-}
+    .btn-add {
+      background: var(--accent);
+      border-color: transparent;
+      color: #fff;
+      font-weight: 500;
+    }
+    .btn-add:hover { background: #d03e3d; }
 
-function resolveCollisions(nodes) {
-  for (let iter = 0; iter < 400; iter++) {
-    let moved = false;
-    for (let a = 0; a < nodes.length; a++) {
-      for (let b = a + 1; b < nodes.length; b++) {
-        const na = nodes[a], nb = nodes[b];
-        if (na.fixed && nb.fixed) continue;
-        if (!overlaps(na.box, nb.box)) continue;
-        moved = true;
-        const acx = na.box.x + na.box.w / 2, acy = na.box.y + na.box.h / 2;
-        const bcx = nb.box.x + nb.box.w / 2, bcy = nb.box.y + nb.box.h / 2;
-        let dx = acx - bcx, dy = acy - bcy;
-        const d = Math.sqrt(dx*dx + dy*dy) || 1;
-        dx /= d; dy /= d;
-        const push = 2.5;
-        if (!na.fixed) { na.box.x += dx * push; na.box.y += dy * push; }
-        if (!nb.fixed) { nb.box.x -= dx * push; nb.box.y -= dy * push; }
+    /* ── main layout ── */
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 2.5rem 1.5rem 5rem;
+    }
+
+    .hero {
+      margin-bottom: 2.5rem;
+    }
+
+    .eyebrow {
+      font-family: var(--mono);
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+
+    .hero h1 {
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      color: var(--text-hi);
+      margin-bottom: 0.6rem;
+    }
+
+    .hero h1 strong {
+      font-weight: 500;
+    }
+
+    .hero p {
+      font-size: 0.875rem;
+      color: var(--text-mid);
+      max-width: 480px;
+    }
+
+    /* ── chart + legend layout ── */
+    .chart-area {
+      display: grid;
+      grid-template-columns: 1fr 200px;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 600px) {
+      .chart-area { grid-template-columns: 1fr; }
+    }
+
+    .chart-card {
+      background: var(--card-bg);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-card);
+      overflow: hidden;
+    }
+
+    /* ── legend ── */
+    .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      position: relative;
+    }
+
+    .legend::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      border-radius: 2px;
+      background: linear-gradient(
+        to bottom,
+        #E24B4A,
+        #EF9F27,
+        #7F77DD,
+        #378ADD,
+        #639922,
+        #1D9E75,
+        #888780
+      );
+    }
+
+    .legend-item {
+      padding: 8px 10px 8px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      cursor: default;
+    }
+
+    .legend-item:last-child { border-bottom: none; }
+
+    .legend-name {
+      font-family: var(--mono);
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-mid);
+      line-height: 1.3;
+    }
+
+    .legend-count {
+      font-size: 11px;
+      color: var(--text-lo);
+      margin-top: 1px;
+    }
+
+    .legend-count span {
+      font-weight: 500;
+      color: var(--text-mid);
+    }
+
+    .legend-header {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-lo);
+      padding: 0 10px 10px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 0;
+    }
+
+    /* ── hint + actions ── */
+    .hint {
+      font-size: 12px;
+      color: var(--text-lo);
+      margin-top: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* ── dot hover ── */
+    .dot-btn { cursor: pointer; }
+    .dot-btn:hover circle.dot-fill { opacity: 1 !important; }
+
+    /* ── footer ── */
+    footer {
+      margin-top: 4rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-lo);
+      letter-spacing: 0.04em;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="topbar" aria-label="toolbar">
+    <div class="topbar-inner">
+      <span class="wordmark">priorities<span>.</span>chart</span>
+      <input type="text" id="itemInput" placeholder="Name a social issue…" />
+      <select id="catSelect" aria-label="Severity category"></select>
+      <button class="btn btn-add" onclick="addItem()">+ Add</button>
+    </div>
+  </nav>
+
+  <div class="page">
+
+    <div class="hero">
+      <p class="eyebrow">Severity Mapping</p>
+      <h1>Where do issues <strong>actually</strong> land?</h1>
+      <p>Place social issues on the spectrum from no concern to immediate danger. Add items using the bar above, click a dot to remove it.</p>
+    </div>
+
+    <div class="chart-area">
+
+      <div class="chart-card" id="chart-wrap"></div>
+
+      <div>
+        <div class="legend" id="legend" aria-label="Category legend"></div>
+        <p class="hint">↑ Outermost = most severe</p>
+        <div class="actions">
+          <button class="btn" onclick="downloadPNG()">↓ PNG</button>
+          <button class="btn" onclick="downloadSVG()">↓ SVG</button>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <footer>
+    <span>priorities.chart — severity mapping tool</span>
+    <span>click any dot to remove</span>
+  </footer>
+
+  <script>
+    const CATS = [
+      { name:"Immediate Physical or Spiritual Danger", short:"Immediate Danger",  fill:"#FCEBEB", stroke:"#E24B4A", text:"#A32D2D", darkFill:"#501313", darkText:"#F7C1C1" },
+      { name:"Impending Societal Doom",                short:"Societal Doom",      fill:"#FAEEDA", stroke:"#EF9F27", text:"#633806", darkFill:"#412402", darkText:"#FAC775" },
+      { name:"Eternal Damnation",                      short:"Eternal Damnation",  fill:"#EEEDFE", stroke:"#7F77DD", text:"#3C3489", darkFill:"#26215C", darkText:"#CECBF6" },
+      { name:"Spiritual Risk",                         short:"Spiritual Risk",      fill:"#E6F1FB", stroke:"#378ADD", text:"#0C447C", darkFill:"#042C53", darkText:"#B5D4F4" },
+      { name:"Questionable",                           short:"Questionable",        fill:"#EAF3DE", stroke:"#639922", text:"#27500A", darkFill:"#173404", darkText:"#C0DD97" },
+      { name:"Less than Perfect",                      short:"Less than Perfect",   fill:"#E1F5EE", stroke:"#1D9E75", text:"#085041", darkFill:"#04342C", darkText:"#9FE1CB" },
+      { name:"No Issue",                               short:"No Issue",            fill:"#F1EFE8", stroke:"#888780", text:"#444441", darkFill:"#2C2C2A", darkText:"#D3D1C7" },
+    ];
+
+    const data = CATS.map(c => ({ ...c, items: [] }));
+    const isDark = () => true; // page is always dark-bg; chart uses light fills
+
+    const W = 680, CX = 340, CY = 340;
+    const OUTER_R = 310, INNER_R = 26;
+    const N = CATS.length;
+    const STEP = (OUTER_R - INNER_R) / N;
+    const DOT_R = 4;
+    const PAD = 5;
+    const CHAR_W_ITEM = 6.6, CHAR_W_CAT = 5.4;
+    const ITEM_FS = 12, CAT_FS = 9;
+    const CAT_LETTER_SPACING = 1.2;
+
+    function ringRadii(i) {
+      const r = OUTER_R - i * STEP;
+      return { r, ri: r - STEP, mid: r - STEP / 2 };
+    }
+
+    function overlaps(a, b) {
+      return !(a.x > b.x+b.w+PAD || b.x > a.x+a.w+PAD || a.y > b.y+b.h+PAD || b.y > a.y+a.h+PAD);
+    }
+
+    function resolveCollisions(nodes) {
+      for (let iter = 0; iter < 400; iter++) {
+        let moved = false;
+        for (let a = 0; a < nodes.length; a++) {
+          for (let b = a+1; b < nodes.length; b++) {
+            const na = nodes[a], nb = nodes[b];
+            if (na.fixed && nb.fixed) continue;
+            if (!overlaps(na.box, nb.box)) continue;
+            moved = true;
+            const acx = na.box.x+na.box.w/2, acy = na.box.y+na.box.h/2;
+            const bcx = nb.box.x+nb.box.w/2, bcy = nb.box.y+nb.box.h/2;
+            let dx = acx-bcx, dy = acy-bcy;
+            const d = Math.sqrt(dx*dx+dy*dy)||1;
+            dx/=d; dy/=d;
+            const push = 2.5;
+            if (!na.fixed) { na.box.x+=dx*push; na.box.y+=dy*push; }
+            if (!nb.fixed) { nb.box.x-=dx*push; nb.box.y-=dy*push; }
+          }
+        }
+        if (!moved) break;
       }
     }
-    if (!moved) break;
-  }
-}
 
-function escXml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-}
+    function escXml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
 
-function buildLayout(dark) {
-  const nodes = [];
+    function buildLayout() {
+      const nodes = [];
 
-  for (let i = 0; i < N; i++) {
-    const { mid } = ringRadii(i);
-    const angle = -Math.PI / 2;
-    const ax = CX + mid * Math.cos(angle);
-    const ay = CY + mid * Math.sin(angle);
-    const labelText = CATS[i].short.toUpperCase();
-    const w = labelText.length * CHAR_W_CAT + (labelText.length - 1) * CAT_LETTER_SPACING;
-    const h = CAT_FS + 2;
-    nodes.push({
-      kind: 'cat', catIdx: i,
-      text: labelText,
-      fs: CAT_FS, fontWeight: '600',
-      letterSpacing: CAT_LETTER_SPACING,
-      color: dark ? CATS[i].darkText : CATS[i].text,
-      opacity: '0.65',
-      anchor: 'middle',
-      box: { x: ax - w/2, y: ay - h/2, w, h },
-      fixed: false,
-    });
-  }
+      for (let i = 0; i < N; i++) {
+        const { mid } = ringRadii(i);
+        const ax = CX + mid * Math.cos(-Math.PI/2);
+        const ay = CY + mid * Math.sin(-Math.PI/2);
+        const labelText = CATS[i].short.toUpperCase();
+        const w = labelText.length * CHAR_W_CAT + (labelText.length-1)*CAT_LETTER_SPACING;
+        const h = CAT_FS + 2;
+        nodes.push({
+          kind:'cat', catIdx:i, text:labelText,
+          fs:CAT_FS, fontWeight:'600', letterSpacing:CAT_LETTER_SPACING,
+          color: CATS[i].text,
+          opacity:'0.65', anchor:'middle',
+          box:{ x:ax-w/2, y:ay-h/2, w, h }, fixed:false,
+        });
+      }
 
-  for (let i = 0; i < N; i++) {
-    const { mid } = ringRadii(i);
-    const items = data[i].items;
-    if (!items.length) continue;
-    const angleStep = (2 * Math.PI) / items.length;
-    const startAngle = Math.PI / 2;
+      for (let i = 0; i < N; i++) {
+        const { mid } = ringRadii(i);
+        const items = data[i].items;
+        if (!items.length) continue;
+        const angleStep = (2*Math.PI)/items.length;
+        const startAngle = Math.PI/2;
 
-    items.forEach((item, j) => {
-      const angle = startAngle + j * angleStep;
-      const dotX = CX + mid * Math.cos(angle);
-      const dotY = CY + mid * Math.sin(angle);
+        items.forEach((item, j) => {
+          const angle = startAngle + j*angleStep;
+          const dotX = CX + mid*Math.cos(angle);
+          const dotY = CY + mid*Math.sin(angle);
 
-      nodes.push({
-        kind: 'dot', catIdx: i, itemIdx: j,
-        dotX, dotY,
-        box: { x: dotX - DOT_R - 1, y: dotY - DOT_R - 1, w: (DOT_R+1)*2, h: (DOT_R+1)*2 },
-        fixed: true,
+          nodes.push({
+            kind:'dot', catIdx:i, itemIdx:j, dotX, dotY,
+            box:{ x:dotX-DOT_R-1, y:dotY-DOT_R-1, w:(DOT_R+1)*2, h:(DOT_R+1)*2 },
+            fixed:true,
+          });
+
+          const w = item.length*CHAR_W_ITEM, h = ITEM_FS+2;
+          const cosA = Math.cos(angle), sinA = Math.sin(angle);
+          const offset = DOT_R+8;
+          let lx, anchor;
+          if (cosA > 0.15)       { lx = dotX+offset; anchor='start'; }
+          else if (cosA < -0.15) { lx = dotX-offset; anchor='end'; }
+          else                   { lx = dotX;         anchor='middle'; }
+          const ly = dotY + (sinA >= 0 ? offset : -offset);
+          const boxX = anchor==='start' ? lx : anchor==='end' ? lx-w : lx-w/2;
+
+          nodes.push({
+            kind:'label', catIdx:i, itemIdx:j, text:item,
+            dotX, dotY,
+            fs:ITEM_FS, fontWeight:'400',
+            color: CATS[i].text,
+            opacity:'1', anchor,
+            box:{ x:boxX, y:ly-h/2, w, h }, fixed:false,
+            strokeColor: CATS[i].stroke,
+          });
+        });
+      }
+
+      resolveCollisions(nodes);
+      return nodes;
+    }
+
+    function buildSVG(forExport) {
+      const bgColor = '#ffffff';
+      const mutedColor = '#9b9990';
+      const nodes = buildLayout();
+      const parts = [];
+
+      parts.push(`<svg id="bullseye-svg" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${W}" role="img"><title>Social Issues Severity Bullseye</title><desc>Concentric rings from most severe (outer) to no issue (inner)</desc>`);
+      parts.push(`<rect width="${W}" height="${W}" fill="${bgColor}"/>`);
+
+      for (let i = 0; i < N; i++) {
+        const { r } = ringRadii(i);
+        parts.push(`<circle cx="${CX}" cy="${CY}" r="${r.toFixed(1)}" fill="${CATS[i].fill}" stroke="${CATS[i].stroke}" stroke-width="0.8"/>`);
+      }
+      parts.push(`<circle cx="${CX}" cy="${CY}" r="${INNER_R}" fill="${bgColor}" stroke="${mutedColor}" stroke-width="0.5"/>`);
+
+      nodes.filter(n => n.kind==='label').forEach(n => {
+        const tx = n.anchor==='start' ? n.box.x : n.anchor==='end' ? n.box.x+n.box.w : n.box.x+n.box.w/2;
+        const ty = n.box.y+n.box.h/2;
+        parts.push(`<line x1="${n.dotX.toFixed(1)}" y1="${n.dotY.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="${n.strokeColor}" stroke-width="0.5" opacity="0.3"/>`);
       });
 
-      const w = item.length * CHAR_W_ITEM;
-      const h = ITEM_FS + 2;
-      const cosA = Math.cos(angle), sinA = Math.sin(angle);
-      const offset = DOT_R + 8;
-      let lx, anchor;
-      if (cosA > 0.15)       { lx = dotX + offset; anchor = 'start'; }
-      else if (cosA < -0.15) { lx = dotX - offset; anchor = 'end'; }
-      else                   { lx = dotX;           anchor = 'middle'; }
-      const ly = dotY + (sinA >= 0 ? offset : -offset);
-      const boxX = anchor === 'start' ? lx : anchor === 'end' ? lx - w : lx - w/2;
-
-      nodes.push({
-        kind: 'label', catIdx: i, itemIdx: j,
-        text: item,
-        dotX, dotY,
-        fs: ITEM_FS, fontWeight: '400',
-        color: dark ? CATS[i].darkText : CATS[i].text,
-        opacity: '1',
-        anchor,
-        box: { x: boxX, y: ly - h/2, w, h },
-        fixed: false,
-        strokeColor: CATS[i].stroke,
+      nodes.filter(n => n.kind==='dot').forEach(n => {
+        const c = CATS[n.catIdx];
+        const clickAttr = forExport ? '' : ` onclick="removeItem(${n.catIdx},${n.itemIdx})" role="button" aria-label="Remove ${escXml(data[n.catIdx].items[n.itemIdx] || '')}" style="cursor:pointer"`;
+        parts.push(`<g class="dot-btn"${clickAttr}>`);
+        parts.push(`<circle cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R+6}" fill="transparent"/>`);
+        parts.push(`<circle class="dot-fill" cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R}" fill="${c.stroke}" opacity="0.8"/>`);
+        parts.push(`<line x1="${(n.dotX-2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX+2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${bgColor}" stroke-width="1.3" stroke-linecap="round"/>`);
+        parts.push(`<line x1="${(n.dotX+2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX-2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${bgColor}" stroke-width="1.3" stroke-linecap="round"/>`);
+        parts.push(`</g>`);
       });
+
+      nodes.filter(n => n.kind==='cat' || n.kind==='label').forEach(n => {
+        const bx=n.box.x, by=n.box.y, bw=n.box.w, bh=n.box.h;
+        const tx = n.anchor==='start' ? bx : n.anchor==='end' ? bx+bw : bx+bw/2;
+        const ty = by+bh*0.78;
+        const extra = n.letterSpacing ? ` letter-spacing="${n.letterSpacing}"` : '';
+        const opacityAttr = n.opacity && n.opacity !== '1' ? ` opacity="${n.opacity}"` : '';
+        parts.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${n.anchor}" font-size="${n.fs}" font-family="DM Sans,system-ui,sans-serif" font-weight="${n.fontWeight}" fill="${n.color}"${extra}${opacityAttr}>${escXml(n.text)}</text>`);
+      });
+
+      parts.push(`</svg>`);
+      return parts.join('');
+    }
+
+    function renderChart() {
+      document.getElementById('chart-wrap').innerHTML = buildSVG(false);
+      renderLegend();
+    }
+
+    function renderLegend() {
+      const el = document.getElementById('legend');
+      el.innerHTML = `<div class="legend-header">Severity — outer to inner</div>` +
+        CATS.map((c, i) => {
+          const count = data[i].items.length;
+          return `<div class="legend-item">
+            <div class="legend-name" style="color:${c.stroke}">${c.short}</div>
+            <div class="legend-count"><span>${count}</span> ${count === 1 ? 'issue' : 'issues'}</div>
+          </div>`;
+        }).join('');
+    }
+
+    function removeItem(ci, ii) {
+      data[ci].items.splice(ii, 1);
+      renderChart();
+    }
+
+    function addItem() {
+      const inp = document.getElementById('itemInput');
+      const sel = document.getElementById('catSelect');
+      const val = inp.value.trim();
+      if (!val) return;
+      data[+sel.value].items.push(val);
+      inp.value = ''; inp.focus();
+      renderChart();
+    }
+
+    document.getElementById('itemInput').addEventListener('keydown', e => {
+      if (e.key === 'Enter') addItem();
     });
-  }
 
-  resolveCollisions(nodes);
-  return nodes;
-}
+    function populateSelect() {
+      const sel = document.getElementById('catSelect');
+      CATS.forEach((c, i) => {
+        const opt = document.createElement('option');
+        opt.value = i; opt.textContent = c.name;
+        sel.appendChild(opt);
+      });
+    }
 
-function renderChart() {
-  const dark = isDark();
-  const bgColor    = dark ? '#1a1a1a' : '#ffffff';
-  const mutedColor = dark ? '#6b6960' : '#9b9990';
+    function downloadPNG() {
+      const svgStr = buildSVG(true);
+      const blob = new Blob([svgStr], { type:'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 680; canvas.height = 680;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0,0,680,680);
+        ctx.drawImage(img,0,0,680,680);
+        URL.revokeObjectURL(url);
+        const a = document.createElement('a');
+        a.download = 'priorities-chart.png';
+        a.href = canvas.toDataURL('image/png');
+        a.click();
+      };
+      img.src = url;
+    }
 
-  const nodes = buildLayout(dark);
-  const svg = [];
+    function downloadSVG() {
+      const svgStr = buildSVG(true);
+      const blob = new Blob([svgStr], { type:'image/svg+xml' });
+      const a = document.createElement('a');
+      a.download = 'priorities-chart.svg';
+      a.href = URL.createObjectURL(blob);
+      a.click();
+    }
 
-  svg.push(`<svg id="bullseye-svg" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${W}" role="img"><title>Social issues severity bullseye</title><desc>Concentric rings from most severe (outer) to no issue (inner)</desc>`);
-  svg.push(`<rect width="${W}" height="${W}" fill="${bgColor}"/>`);
-
-  for (let i = 0; i < N; i++) {
-    const { r } = ringRadii(i);
-    svg.push(`<circle cx="${CX}" cy="${CY}" r="${r.toFixed(1)}" fill="${dark ? CATS[i].darkFill : CATS[i].fill}" stroke="${CATS[i].stroke}" stroke-width="0.8"/>`);
-  }
-  svg.push(`<circle cx="${CX}" cy="${CY}" r="${INNER_R}" fill="${bgColor}" stroke="${mutedColor}" stroke-width="0.5"/>`);
-
-  nodes.filter(n => n.kind === 'label').forEach(n => {
-    const tx = n.anchor === 'start' ? n.box.x : n.anchor === 'end' ? n.box.x + n.box.w : n.box.x + n.box.w/2;
-    const ty = n.box.y + n.box.h/2;
-    svg.push(`<line x1="${n.dotX.toFixed(1)}" y1="${n.dotY.toFixed(1)}" x2="${tx.toFixed(1)}" y2="${ty.toFixed(1)}" stroke="${n.strokeColor}" stroke-width="0.5" opacity="0.3"/>`);
-  });
-
-  nodes.filter(n => n.kind === 'dot').forEach(n => {
-    const c = CATS[n.catIdx];
-    svg.push(`<g class="dot-btn" onclick="removeItem(${n.catIdx},${n.itemIdx})" role="button" aria-label="Remove item" style="cursor:pointer">`);
-    svg.push(`<circle cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R+5}" fill="transparent"/>`);
-    svg.push(`<circle cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R}" fill="${c.stroke}" opacity="0.8" style="transition:opacity .15s"/>`);
-    svg.push(`<line x1="${(n.dotX-2.5).toFixed(1)}" y1="${(n.dotY-2.5).toFixed(1)}" x2="${(n.dotX+2.5).toFixed(1)}" y2="${(n.dotY+2.5).toFixed(1)}" stroke="${bgColor}" stroke-width="1.2" stroke-linecap="round"/>`);
-    svg.push(`<line x1="${(n.dotX+2.5).toFixed(1)}" y1="${(n.dotY-2.5).toFixed(1)}" x2="${(n.dotX-2.5).toFixed(1)}" y2="${(n.dotY+2.5).toFixed(1)}" stroke="${bgColor}" stroke-width="1.2" stroke-linecap="round"/>`);
-    svg.push(`</g>`);
-  });
-
-  nodes.filter(n => n.kind === 'cat' || n.kind === 'label').forEach(n => {
-    const bx = n.box.x, by = n.box.y, bw = n.box.w, bh = n.box.h;
-    const tx = n.anchor === 'start' ? bx : n.anchor === 'end' ? bx + bw : bx + bw/2;
-    const ty = by + bh * 0.78;
-    const extra = n.letterSpacing ? ` letter-spacing="${n.letterSpacing}"` : '';
-    const opacity = n.opacity ? ` opacity="${n.opacity}"` : '';
-    svg.push(`<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="${n.anchor}" font-size="${n.fs}" font-family="'Anthropic Sans',sans-serif" font-weight="${n.fontWeight}" fill="${n.color}"${extra}${opacity}>${escXml(n.text)}</text>`);
-  });
-
-  svg.push(`</svg>`);
-  document.getElementById('chart-wrap').innerHTML = svg.join('');
-}
-
-function removeItem(ci, ii) {
-  data[ci].items.splice(ii, 1);
-  renderChart();
-}
-
-function addItem() {
-  const inp = document.getElementById('itemInput');
-  const sel = document.getElementById('catSelect');
-  const val = inp.value.trim();
-  if (!val) return;
-  data[+sel.value].items.push(val);
-  inp.value = ''; inp.focus();
-  renderChart();
-}
-
-document.getElementById('itemInput').addEventListener('keydown', e => { if (e.key === 'Enter') addItem(); });
-
-function populateSelect() {
-  const sel = document.getElementById('catSelect');
-  CATS.forEach((c, i) => {
-    const opt = document.createElement('option');
-    opt.value = i; opt.textContent = c.name;
-    sel.appendChild(opt);
-  });
-}
-
-function downloadChart() {
-  const svgEl = document.getElementById('bullseye-svg');
-  if (!svgEl) return;
-  const svgStr = new XMLSerializer().serializeToString(svgEl);
-  const blob = new Blob([svgStr], { type:'image/svg+xml' });
-  const url = URL.createObjectURL(blob);
-  const img = new Image();
-  img.onload = () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = 680; canvas.height = 680;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = isDark() ? '#1a1a1a' : '#ffffff';
-    ctx.fillRect(0,0,680,680);
-    ctx.drawImage(img,0,0,680,680);
-    URL.revokeObjectURL(url);
-    const a = document.createElement('a');
-    a.download = 'social-issues-bullseye.png';
-    a.href = canvas.toDataURL('image/png');
-    a.click();
-  };
-  img.src = url;
-}
-
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', renderChart);
-populateSelect();
-renderChart();
-</script>
+    populateSelect();
+    renderChart();
+  </script>
+</body>
+</html>
