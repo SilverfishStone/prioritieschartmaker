@@ -396,13 +396,12 @@
       { name:"No Issue",                               short:"No Issue",            stroke:"#888780", text:"#444441" },
     ];
 
-    // derive a soft fill from a hex stroke color
+    // derive a semi-transparent fill from the stroke color
     function strokeToFill(hex) {
       const r = parseInt(hex.slice(1,3),16);
       const g = parseInt(hex.slice(3,5),16);
       const b = parseInt(hex.slice(5,7),16);
-      const mix = (c) => Math.round(c * 0.18 + 255 * 0.82);
-      return `rgb(${mix(r)},${mix(g)},${mix(b)})`;
+      return `rgba(${r},${g},${b},0.18)`;
     }
 
     // derive a dark label text color from stroke
@@ -523,13 +522,14 @@
       const nodes = buildLayout();
       const parts = [];
       parts.push(`<svg id="bullseye-svg" xmlns="http://www.w3.org/2000/svg" width="100%" viewBox="0 0 ${W} ${W}" role="img"><title>Social Issues Severity Bullseye</title><desc>Concentric rings from most severe (outer) to no issue (inner)</desc>`);
-      parts.push(`<rect width="${W}" height="${W}" fill="${escXml(bg)}"/>`);
+      if (forExport) parts.push(`<rect width="${W}" height="${W}" fill="${escXml(bg)}"/>`);
       for (let i = 0; i < N; i++) {
         const { r } = ringRadii(i);
         const fill = strokeToFill(CATS[i].stroke);
         parts.push(`<circle cx="${CX}" cy="${CY}" r="${r.toFixed(1)}" fill="${escXml(fill)}" stroke="${CATS[i].stroke}" stroke-width="0.8"/>`);
       }
-      parts.push(`<circle cx="${CX}" cy="${CY}" r="${INNER_R}" fill="${escXml(bg)}" stroke="${mutedColor}" stroke-width="0.5"/>`);
+      const centerFill = forExport ? escXml(bg) : 'transparent';
+      parts.push(`<circle cx="${CX}" cy="${CY}" r="${INNER_R}" fill="${centerFill}" stroke="${mutedColor}" stroke-width="0.5"/>`);
       nodes.filter(n => n.kind==='label').forEach(n => {
         const tx = n.anchor==='start' ? n.box.x : n.anchor==='end' ? n.box.x+n.box.w : n.box.x+n.box.w/2;
         const ty = n.box.y+n.box.h/2;
@@ -541,8 +541,9 @@
         parts.push(`<g class="dot-btn"${clickAttr}>`);
         parts.push(`<circle cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R+6}" fill="transparent"/>`);
         parts.push(`<circle class="dot-fill" cx="${n.dotX.toFixed(1)}" cy="${n.dotY.toFixed(1)}" r="${DOT_R}" fill="${c.stroke}" opacity="0.8"/>`);
-        parts.push(`<line x1="${(n.dotX-2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX+2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${escXml(bg)}" stroke-width="1.3" stroke-linecap="round"/>`);
-        parts.push(`<line x1="${(n.dotX+2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX-2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${escXml(bg)}" stroke-width="1.3" stroke-linecap="round"/>`);
+        const xColor = forExport ? escXml(bg) : 'transparent';
+        parts.push(`<line x1="${(n.dotX-2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX+2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${xColor}" stroke-width="1.3" stroke-linecap="round"/>`);
+        parts.push(`<line x1="${(n.dotX+2.2).toFixed(1)}" y1="${(n.dotY-2.2).toFixed(1)}" x2="${(n.dotX-2.2).toFixed(1)}" y2="${(n.dotY+2.2).toFixed(1)}" stroke="${xColor}" stroke-width="1.3" stroke-linecap="round"/>`);
         parts.push(`</g>`);
       });
       nodes.filter(n => n.kind==='cat' || n.kind==='label').forEach(n => {
